@@ -101,7 +101,8 @@ export class CopilotService {
         
         // Map intensity to delay between character acceptances (ms)
         // Higher intensity = lower delay (faster acceptance)
-        const delay = Math.max(20, Math.round(500 - (intensity * 4.8))); 
+        // Increasing speed by factor of 3
+        const delay = Math.max(5, Math.round((500 - (intensity * 4.8)) / 3));
         
         try {
             // Get current editor
