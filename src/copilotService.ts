@@ -62,58 +62,120 @@ export class CopilotService {
      * @param state The control state to execute
      */
     public async executeCopilotControl(state: CopilotControlState): Promise<void> {
-        // If intensity is 0, no action needed
-        if (state.intensity === 0) {
-            return;
-        }
-
         // Update the current control state
         this.controlState = state;
+
+        // If in deadzone (intensity is 0), stop any running timers
+        if (state.intensity === 0) {
+            this.stopAcceptTimer();
+            return;
+        }
 
         if (state.isAccepting) {
             await this.acceptSuggestion(state.intensity);
         } else if (state.isDeleting) {
+            // Stop any accept timer first
+            this.stopAcceptTimer();
             await this.deleteSuggestion(state.intensity);
         }
     }
+
+    // Timer for repeating character acceptance
+    private acceptTimer: NodeJS.Timeout | null = null;
+    // Current active editor
+    private activeEditor: vscode.TextEditor | undefined;
+    // Flag to indicate if we're currently in an accepting state
+    private isCurrentlyAccepting: boolean = false;
 
     /**
      * Accept the current Copilot suggestion at the given intensity/speed
      * @param intensity The intensity/speed of acceptance (0-100)
      */
     private async acceptSuggestion(intensity: number): Promise<void> {
-        // Map intensity to an appropriate chunk size of characters to accept
-        const chunkSize = Math.max(1, Math.round(intensity / 10));
+        // Stop any existing timer
+        this.stopAcceptTimer();
+        
+        // Map intensity to delay between character acceptances (ms)
+        // Higher intensity = lower delay (faster acceptance)
+        const delay = Math.max(20, Math.round(500 - (intensity * 4.8))); 
         
         try {
-            // Accept suggestion using VS Code's API
-            // The exact approach depends on how Copilot's API is exposed
+            // Get current editor
+            this.activeEditor = vscode.window.activeTextEditor;
             
-            // For now, we'll simulate pressing Tab key which is the default for accepting suggestions
-            // This can be refined once we understand more about the Copilot API
-            await vscode.commands.executeCommand('editor.action.inlineSuggest.commit');
+            if (!this.activeEditor) {
+                return;
+            }
+            
+            // Start accepting one character at a time
+            this.isCurrentlyAccepting = true;
+            
+            // Start a timer to repeatedly accept one character at a time
+            this.acceptTimer = setInterval(() => {
+                this.acceptOneCharacter();
+            }, delay);
         } catch (error) {
             console.error('Error accepting Copilot suggestion:', error);
+            this.stopAcceptTimer();
         }
     }
-
+    
     /**
-     * Delete the current Copilot suggestion at the given intensity/speed
-     * @param intensity The intensity/speed of deletion (0-100)
+     * Accept a single character from the current suggestion
      */
-    private async deleteSuggestion(intensity: number): Promise<void> {
-        // Map intensity to an appropriate chunk size of characters to delete
-        const chunkSize = Math.max(1, Math.round(intensity / 10));
+    private async acceptOneCharacter(): Promise<void> {
+        try {
+            // Use Copilot's command to accept one character
+            await vscode.commands.executeCommand('editor.action.inlineSuggest.acceptNextWord');
+        } catch (error) {
+            console.error('Error accepting character:', error);
+            this.stopAcceptTimer();
+        }
+    }
+    
+    /**
+     * Stop the current accept timer
+     */
+    private stopAcceptTimer(): void {
+        if (this.acceptTimer) {
+            clearInterval(this.acceptTimer);
+            this.acceptTimer = null;
+        }
+        this.isCurrentlyAccepting = false;
+    }
+
+    // Timer for repeating character deletion
+    private deleteTimer: NodeJS.Timeout | null = null;
+    
+    /**
+     * Delete the current Copilot suggestion
+     * @param intensity The intensity/speed of deletion (0-100) - currently unused but kept for consistency
+     */
+    private async deleteSuggestion(_intensity: number): Promise<void> {
+        // Stop any existing timer
+        this.stopDeleteTimer();
         
         try {
-            // Dismiss suggestion using VS Code's API
+            // For immediate feedback, dismiss the entire suggestion
             await vscode.commands.executeCommand('editor.action.inlineSuggest.hide');
         } catch (error) {
             console.error('Error deleting Copilot suggestion:', error);
         }
     }
+    
+    /**
+     * Stop the current delete timer
+     */
+    private stopDeleteTimer(): void {
+        if (this.deleteTimer) {
+            clearInterval(this.deleteTimer);
+            this.deleteTimer = null;
+        }
+    }
 
     public dispose(): void {
+        this.stopAcceptTimer();
+        this.stopDeleteTimer();
         this.disposables.forEach(d => d.dispose());
     }
 }

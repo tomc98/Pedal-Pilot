@@ -6,9 +6,9 @@ PedalPilot 🚀 – A VSCode extension that uses foot pedal input to seamlessly 
 
 - Connect to Saitek Pro Flight Rudder Pedals or other similar HID devices
 - Control GitHub Copilot inline suggestions with your left pedal
-  - Push forward to accept suggestions
-  - Pull back to delete suggestions
-  - Intensity based on pedal position (faster acceptance/deletion with more pressure)
+  - Push forward to accept suggestions character-by-character
+  - Pull back to dismiss/hide suggestions
+  - Acceptance speed varies based on pedal position (faster with more forward pressure)
 - Debug view to visualize pedal inputs
 - Auto-detection of commonly used USB pedals
 - Configuration options for custom devices
@@ -41,8 +41,8 @@ Using with GitHub Copilot:
 2. Start typing code to generate Copilot suggestions
 3. Use the left pedal to control acceptance:
    - Keep pedal at center position (default: 63) to see suggestions without accepting/rejecting
-   - Push pedal forward to accept suggestions (harder push = faster acceptance)
-   - Pull pedal back to dismiss suggestions
+   - Push pedal forward to accept suggestions character-by-character (harder push = faster acceptance)
+   - Pull pedal back to dismiss/hide the entire suggestion
 
 ## Configuration
 
