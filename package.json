@@ -1,0 +1,93 @@
+{
+  "name": "pedal-pilot",
+  "displayName": "Pedal Pilot",
+  "version": "0.1.0",
+  "description": "PedalPilot 🚀 – A VSCode extension that uses foot pedal input to seamlessly control AI completions. Adjust completion acceptance rate intuitively with foot pressure, keeping your hands coding and your workflow effortless.",
+  "publisher": "pedalpilot",
+  "engines": {
+    "vscode": "^1.98.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "configuration": {
+      "title": "Pedal Pilot",
+      "properties": {
+        "pedalPilot.vendorId": {
+          "type": "number",
+          "default": 1699,
+          "description": "Vendor ID of your pedal device (0x06A3 = 1699 for Saitek)"
+        },
+        "pedalPilot.productId": {
+          "type": "number",
+          "default": 1891,
+          "description": "Product ID of your pedal device (0x0763 = 1891 for Saitek Pro Flight Rudder Pedals)"
+        },
+        "pedalPilot.debugMode": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable debug logging for pedal inputs"
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "pedalPilot.reconnect",
+        "title": "Pedal Pilot: Reconnect to Pedals"
+      },
+      {
+        "command": "pedalPilot.listHIDDevices",
+        "title": "Pedal Pilot: List Connected HID Devices"
+      },
+      {
+        "command": "pedalPilot.selectDevice",
+        "title": "Pedal Pilot: Select Pedal Device"
+      },
+      {
+        "command": "pedalPilot.showDebugView",
+        "title": "Pedal Pilot: Show Debug View"
+      }
+    ]
+  },
+  "main": "./out/extension.js",
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "test": "node ./out/test/runTest.js",
+    "dev": "npm run watch",
+    "build": "npm run compile",
+    "package": "vsce package"
+  },
+  "keywords": [
+    "pedal",
+    "foot pedal",
+    "flight pedal",
+    "ai",
+    "copilot",
+    "vscode"
+  ],
+  "author": "",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/username/pedal-pilot.git"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.10",
+    "@types/vscode": "^1.98.0",
+    "@vscode/vsce": "^3.2.2",
+    "eslint": "^9.22.0",
+    "prettier": "^3.5.3",
+    "typescript": "^5.8.2"
+  },
+  "dependencies": {
+    "node-hid": "^3.1.2"
+  }
+}
