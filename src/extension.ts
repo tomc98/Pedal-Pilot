@@ -5,6 +5,7 @@ import { PedalDebugView } from './debugView';
 import { getConfig, updateConfig } from './config';
 import { CopilotService } from './copilotService';
 import { TTSService } from './ttsService';
+import { STTService } from './sttService';
 
 export function activate(context: vscode.ExtensionContext) {
   console.log('Activating Pedal Pilot extension');
@@ -31,6 +32,10 @@ export function activate(context: vscode.ExtensionContext) {
   // Create text-to-speech service
   const ttsService = new TTSService();
   context.subscriptions.push(ttsService);
+  
+  // Create speech-to-text service
+  const sttService = new STTService();
+  context.subscriptions.push(sttService);
   
   // If debug mode is enabled, connect raw data to the debug view
   const config = getConfig();
@@ -89,8 +94,9 @@ export function activate(context: vscode.ExtensionContext) {
     statusBarItem.tooltip = 'Click to list available HID devices';
   }
 
-  // Track rudder position to detect changes for TTS toggle
+  // Track positions to detect changes for toggles
   let previousRudderPosition = 0;
+  let previousRightPedalPosition = 0;
 
   // Handle pedal state updates
   pedalService.onPedalStateChanged(state => {
@@ -116,15 +122,29 @@ export function activate(context: vscode.ExtensionContext) {
     // Get the configuration value for TTS toggle threshold
     const ttsToggleThreshold = getConfig().ttsToggleThreshold;
     
-    // Detect threshold crossing
+    // Detect threshold crossing for TTS toggle (rudder)
     if ((previousRudderPosition < ttsToggleThreshold && currentRudderPosition >= ttsToggleThreshold) ||
         (previousRudderPosition >= ttsToggleThreshold && currentRudderPosition < ttsToggleThreshold)) {
       // Toggle text-to-speech
       ttsService.toggle();
     }
     
-    // Update previous position for next comparison
+    // Check if right pedal crossed the threshold to toggle speech recognition
+    const currentRightPedalPosition = state.rightPedal;
+    
+    // Get the configuration value for speech recognition toggle threshold
+    const sttToggleThreshold = getConfig().sttToggleThreshold;
+    
+    // Detect threshold crossing for speech recognition toggle (right pedal)
+    if ((previousRightPedalPosition < sttToggleThreshold && currentRightPedalPosition >= sttToggleThreshold) ||
+        (previousRightPedalPosition >= sttToggleThreshold && currentRightPedalPosition < sttToggleThreshold)) {
+      // Toggle speech recognition
+      sttService.toggle();
+    }
+    
+    // Update previous positions for next comparison
     previousRudderPosition = currentRudderPosition;
+    previousRightPedalPosition = currentRightPedalPosition;
   });
 
   // Register command to select a device
@@ -209,12 +229,18 @@ export function activate(context: vscode.ExtensionContext) {
     ttsService.toggle();
   });
   
+  // Register command to toggle speech recognition manually
+  const toggleSpeechRecognitionCommand = vscode.commands.registerCommand('pedalPilot.toggleSTT', () => {
+    sttService.toggle();
+  });
+  
   context.subscriptions.push(
     selectDeviceCommand, 
     reconnectCommand, 
     showDebugCommand, 
     calibratePedalCenterCommand,
-    toggleTTSCommand
+    toggleTTSCommand,
+    toggleSpeechRecognitionCommand
   );
 }
 

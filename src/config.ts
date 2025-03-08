@@ -8,6 +8,7 @@ const DEBUG_MODE_KEY = 'debugMode';
 const PEDAL_CENTER_POSITION_KEY = 'pedalCenterPosition';
 const PEDAL_DEADZONE_KEY = 'pedalDeadzone';
 const TTS_TOGGLE_THRESHOLD_KEY = 'ttsToggleThreshold';
+const STT_TOGGLE_THRESHOLD_KEY = 'sttToggleThreshold';
 
 export interface PedalPilotConfig {
   vendorId: number;
@@ -16,6 +17,7 @@ export interface PedalPilotConfig {
   pedalCenterPosition: number;
   pedalDeadzone: number;
   ttsToggleThreshold: number;
+  sttToggleThreshold: number;
 }
 
 export function getConfig(): PedalPilotConfig {
@@ -28,7 +30,8 @@ export function getConfig(): PedalPilotConfig {
     debugMode: config.get<boolean>(DEBUG_MODE_KEY, false),
     pedalCenterPosition: config.get<number>(PEDAL_CENTER_POSITION_KEY, 63),
     pedalDeadzone: config.get<number>(PEDAL_DEADZONE_KEY, 1),
-    ttsToggleThreshold: config.get<number>(TTS_TOGGLE_THRESHOLD_KEY, 90)
+    ttsToggleThreshold: config.get<number>(TTS_TOGGLE_THRESHOLD_KEY, 90),
+    sttToggleThreshold: config.get<number>(STT_TOGGLE_THRESHOLD_KEY, 90)
   };
 }
 
