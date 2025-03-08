@@ -46,6 +46,29 @@
           "type": "number",
           "default": 90,
           "description": "Rudder position threshold (0-127) to toggle text-to-speech"
+        },
+        "pedalPilot.sttToggleThreshold": {
+          "type": "number",
+          "default": 90,
+          "description": "Right pedal position threshold (0-127) to toggle speech recognition"
+        },
+        "pedalPilot.sttEngine": {
+          "type": "string",
+          "enum": [
+            "webSpeech",
+            "deepgram"
+          ],
+          "default": "webSpeech",
+          "description": "Speech recognition engine to use (Web Speech API or Deepgram Nova-3)"
+        },
+        "pedalPilot.deepgramApiKey": {
+          "type": "string",
+          "description": "Deepgram API key for speech recognition (required when using Deepgram engine)"
+        },
+        "pedalPilot.deepgramLanguage": {
+          "type": "string",
+          "default": "en-US",
+          "description": "Language code for Deepgram speech recognition"
         }
       }
     },
@@ -73,6 +96,22 @@
       {
         "command": "pedalPilot.toggleTTS",
         "title": "Pedal Pilot: Toggle Text-to-Speech"
+      },
+      {
+        "command": "pedalPilot.toggleSTT",
+        "title": "Pedal Pilot: Toggle Speech Recognition"
+      },
+      {
+        "command": "pedalPilot.toggleDeepgram",
+        "title": "Pedal Pilot: Toggle Deepgram Speech Recognition"
+      },
+      {
+        "command": "pedalPilot.setDeepgramLanguage",
+        "title": "Pedal Pilot: Set Deepgram Speech Recognition Language"
+      },
+      {
+        "command": "pedalPilot.selectSTTEngine",
+        "title": "Pedal Pilot: Select Speech Recognition Engine"
       }
     ]
   },
@@ -105,12 +144,14 @@
   "devDependencies": {
     "@types/node": "^22.13.10",
     "@types/vscode": "^1.93.0",
+    "@types/ws": "^8.18.0",
     "@vscode/vsce": "^3.2.2",
     "eslint": "^9.22.0",
     "prettier": "^3.5.3",
     "typescript": "^5.8.2"
   },
   "dependencies": {
+    "@deepgram/sdk": "^3.11.2",
     "node-hid": "^3.1.2"
   }
 }

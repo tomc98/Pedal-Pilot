@@ -1,36 +1,9 @@
 import * as vscode from 'vscode';
 
-// Define web speech API types that might not be available in Node.js typings
-declare global {
-    interface Window {
-        speechSynthesis?: SpeechSynthesis;
-    }
-    
-    interface SpeechSynthesis {
-        speak(utterance: SpeechSynthesisUtterance): void;
-        cancel(): void;
-        pause(): void;
-        resume(): void;
-        getVoices(): SpeechSynthesisVoice[];
-    }
-    
-    interface SpeechSynthesisUtterance {
-        text: string;
-        lang?: string;
-        pitch?: number;
-        rate?: number;
-        voice?: SpeechSynthesisVoice;
-        volume?: number;
-    }
-    
-    interface SpeechSynthesisVoice {
-        voiceURI: string;
-        name: string;
-        lang: string;
-        localService: boolean;
-        default: boolean;
-    }
-}
+// Use simple type declarations for speech synthesis
+type SpeechSynthesis = any;
+type SpeechSynthesisUtterance = any;
+type SpeechSynthesisVoice = any;
 
 /**
  * Service for handling text-to-speech functionality

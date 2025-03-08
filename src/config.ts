@@ -9,6 +9,15 @@ const PEDAL_CENTER_POSITION_KEY = 'pedalCenterPosition';
 const PEDAL_DEADZONE_KEY = 'pedalDeadzone';
 const TTS_TOGGLE_THRESHOLD_KEY = 'ttsToggleThreshold';
 const STT_TOGGLE_THRESHOLD_KEY = 'sttToggleThreshold';
+const STT_ENGINE_KEY = 'sttEngine';
+const DEEPGRAM_API_KEY = 'deepgramApiKey';
+const DEEPGRAM_LANGUAGE_KEY = 'deepgramLanguage';
+
+// STT engine types
+export enum STTEngineType {
+  WebSpeech = 'webSpeech',
+  Deepgram = 'deepgram'
+}
 
 export interface PedalPilotConfig {
   vendorId: number;
@@ -18,6 +27,9 @@ export interface PedalPilotConfig {
   pedalDeadzone: number;
   ttsToggleThreshold: number;
   sttToggleThreshold: number;
+  sttEngine: STTEngineType;
+  deepgramApiKey?: string;
+  deepgramLanguage: string;
 }
 
 export function getConfig(): PedalPilotConfig {
@@ -31,7 +43,10 @@ export function getConfig(): PedalPilotConfig {
     pedalCenterPosition: config.get<number>(PEDAL_CENTER_POSITION_KEY, 63),
     pedalDeadzone: config.get<number>(PEDAL_DEADZONE_KEY, 1),
     ttsToggleThreshold: config.get<number>(TTS_TOGGLE_THRESHOLD_KEY, 90),
-    sttToggleThreshold: config.get<number>(STT_TOGGLE_THRESHOLD_KEY, 90)
+    sttToggleThreshold: config.get<number>(STT_TOGGLE_THRESHOLD_KEY, 90),
+    sttEngine: config.get<STTEngineType>(STT_ENGINE_KEY, STTEngineType.WebSpeech),
+    deepgramApiKey: config.get<string>(DEEPGRAM_API_KEY),
+    deepgramLanguage: config.get<string>(DEEPGRAM_LANGUAGE_KEY, 'en-US')
   };
 }
 

@@ -2,10 +2,11 @@ import * as vscode from 'vscode';
 import { PedalService, PedalState } from './pedalService';
 import { selectHIDDevice } from './util';
 import { PedalDebugView } from './debugView';
-import { getConfig, updateConfig } from './config';
+import { getConfig, updateConfig, STTEngineType } from './config';
 import { CopilotService } from './copilotService';
 import { TTSService } from './ttsService';
 import { STTService } from './sttService';
+import { DeepgramService } from './deepgramService';
 
 export function activate(context: vscode.ExtensionContext) {
   console.log('Activating Pedal Pilot extension');
@@ -33,9 +34,10 @@ export function activate(context: vscode.ExtensionContext) {
   const ttsService = new TTSService();
   context.subscriptions.push(ttsService);
   
-  // Create speech-to-text service
+  // Create speech recognition services
   const sttService = new STTService();
-  context.subscriptions.push(sttService);
+  const deepgramService = new DeepgramService();
+  context.subscriptions.push(sttService, deepgramService);
   
   // If debug mode is enabled, connect raw data to the debug view
   const config = getConfig();
@@ -138,8 +140,29 @@ export function activate(context: vscode.ExtensionContext) {
     // Detect threshold crossing for speech recognition toggle (right pedal)
     if ((previousRightPedalPosition < sttToggleThreshold && currentRightPedalPosition >= sttToggleThreshold) ||
         (previousRightPedalPosition >= sttToggleThreshold && currentRightPedalPosition < sttToggleThreshold)) {
-      // Toggle speech recognition
-      sttService.toggle();
+      console.log(`Right pedal threshold crossing detected: ${previousRightPedalPosition} -> ${currentRightPedalPosition}`);
+      console.log(`Threshold value: ${sttToggleThreshold}`);
+      
+      // Toggle appropriate speech recognition service based on config
+      const sttEngine = getConfig().sttEngine;
+      console.log(`Using speech recognition engine: ${sttEngine}`);
+      
+      if (sttEngine === STTEngineType.Deepgram) {
+        console.log('Toggling Deepgram speech recognition service...');
+        vscode.window.showInformationMessage(`${currentRightPedalPosition >= sttToggleThreshold ? 'Enabling' : 'Disabling'} Deepgram speech recognition...`);
+        
+        deepgramService.toggle().then(enabled => {
+          console.log(`Deepgram speech recognition is now ${enabled ? 'enabled' : 'disabled'}`);
+          vscode.window.showInformationMessage(`Deepgram speech recognition is now ${enabled ? 'enabled' : 'disabled'}`);
+        }).catch(error => {
+          console.error('Error toggling Deepgram:', error);
+          vscode.window.showErrorMessage(`Error toggling Deepgram: ${error}`);
+        });
+      } else {
+        console.log('Toggling Web Speech API speech recognition...');
+        sttService.toggle();
+        console.log(`Web Speech API speech recognition is now ${sttService.isEnabled() ? 'enabled' : 'disabled'}`);
+      }
     }
     
     // Update previous positions for next comparison
@@ -231,7 +254,70 @@ export function activate(context: vscode.ExtensionContext) {
   
   // Register command to toggle speech recognition manually
   const toggleSpeechRecognitionCommand = vscode.commands.registerCommand('pedalPilot.toggleSTT', () => {
-    sttService.toggle();
+    const sttEngine = getConfig().sttEngine;
+    console.log(`Command triggered: toggleSTT with engine: ${sttEngine}`);
+    
+    if (sttEngine === STTEngineType.Deepgram) {
+      console.log('Toggling Deepgram via command');
+      deepgramService.toggle().then(enabled => {
+        console.log(`Command result: Deepgram is now ${enabled ? 'enabled' : 'disabled'}`);
+      });
+    } else {
+      console.log('Toggling Web Speech API via command');
+      sttService.toggle();
+      console.log(`Command result: Web Speech API is now ${sttService.isEnabled() ? 'enabled' : 'disabled'}`);
+    }
+  });
+  
+  // Register command to toggle Deepgram specifically
+  const toggleDeepgramCommand = vscode.commands.registerCommand('pedalPilot.toggleDeepgram', () => {
+    console.log('Command triggered: toggleDeepgram directly');
+    deepgramService.toggle().then(enabled => {
+      console.log(`Command result: Deepgram is now ${enabled ? 'enabled' : 'disabled'}`);
+    }).catch(error => {
+      console.error('Error toggling Deepgram:', error);
+      vscode.window.showErrorMessage('Error toggling Deepgram: ' + error);
+    });
+  });
+  
+  // Register command to set Deepgram language
+  const setDeepgramLanguageCommand = vscode.commands.registerCommand('pedalPilot.setDeepgramLanguage', () => {
+    deepgramService.setLanguage();
+  });
+  
+  // Register command to select STT engine
+  const selectSTTEngineCommand = vscode.commands.registerCommand('pedalPilot.selectSTTEngine', async () => {
+    const engines = [
+      { label: 'Web Speech API', value: STTEngineType.WebSpeech },
+      { label: 'Deepgram Nova-3', value: STTEngineType.Deepgram }
+    ];
+    
+    const selected = await vscode.window.showQuickPick(
+      engines.map(e => e.label),
+      { placeHolder: 'Select speech recognition engine' }
+    );
+    
+    if (selected) {
+      const engineValue = engines.find(e => e.label === selected)?.value || STTEngineType.WebSpeech;
+      
+      // Update the configuration
+      await updateConfig('sttEngine', engineValue);
+      
+      vscode.window.showInformationMessage(`Speech recognition engine set to ${selected}`);
+      
+      // If Deepgram was selected, check for API key
+      if (engineValue === STTEngineType.Deepgram && !getConfig().deepgramApiKey) {
+        // Prompt user to enter API key
+        vscode.window.showInformationMessage(
+          'Deepgram requires an API key. Would you like to set it now?',
+          'Yes', 'No'
+        ).then(selection => {
+          if (selection === 'Yes') {
+            deepgramService.getApiKey();
+          }
+        });
+      }
+    }
   });
   
   context.subscriptions.push(
@@ -240,7 +326,10 @@ export function activate(context: vscode.ExtensionContext) {
     showDebugCommand, 
     calibratePedalCenterCommand,
     toggleTTSCommand,
-    toggleSpeechRecognitionCommand
+    toggleSpeechRecognitionCommand,
+    toggleDeepgramCommand,
+    setDeepgramLanguageCommand,
+    selectSTTEngineCommand
   );
 }
 

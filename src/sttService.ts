@@ -1,48 +1,8 @@
 import * as vscode from 'vscode';
 
-// Define SpeechRecognition interfaces for web API
-declare global {
-    interface Window {
-        SpeechRecognition?: any;
-        webkitSpeechRecognition?: any;
-    }
-    
-    interface SpeechRecognition extends EventTarget {
-        continuous: boolean;
-        interimResults: boolean;
-        lang: string;
-        start(): void;
-        stop(): void;
-        abort(): void;
-        onresult: (event: SpeechRecognitionEvent) => void;
-        onerror: (event: Event) => void;
-        onend: (event: Event) => void;
-        onstart: (event: Event) => void;
-    }
-    
-    interface SpeechRecognitionEvent {
-        results: SpeechRecognitionResultList;
-        resultIndex: number;
-    }
-    
-    interface SpeechRecognitionResultList {
-        length: number;
-        item(index: number): SpeechRecognitionResult;
-        [index: number]: SpeechRecognitionResult;
-    }
-    
-    interface SpeechRecognitionResult {
-        length: number;
-        item(index: number): SpeechRecognitionAlternative;
-        [index: number]: SpeechRecognitionAlternative;
-        isFinal: boolean;
-    }
-    
-    interface SpeechRecognitionAlternative {
-        transcript: string;
-        confidence: number;
-    }
-}
+// Use type declarations for Web Speech API
+type SpeechRecognition = any;
+type SpeechRecognitionEvent = any;
 
 /**
  * Service for handling speech-to-text functionality
@@ -138,6 +98,13 @@ export class STTService implements vscode.Disposable {
         
         this.updateStatusBar();
         vscode.window.showInformationMessage(`Speech recognition ${this.enabled ? 'enabled' : 'disabled'}`);
+        return this.enabled;
+    }
+    
+    /**
+     * Get current enabled state
+     */
+    public isEnabled(): boolean {
         return this.enabled;
     }
     
