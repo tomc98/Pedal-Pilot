@@ -72,7 +72,11 @@ export class CopilotService {
         }
 
         if (state.isAccepting) {
+            // Try our primary approach using VS Code commands
             await this.acceptSuggestion(state.intensity);
+            
+            // If that doesn't work, we could try simulating Tab key press
+            // but this would require editor APIs not currently available
         } else if (state.isDeleting) {
             // Stop any accept timer first
             this.stopAcceptTimer();
@@ -123,12 +127,49 @@ export class CopilotService {
     /**
      * Accept a single character from the current suggestion
      */
+    // Track whether we've shown the fallback warning
+    private fallbackWarningShown = false;
+    
     private async acceptOneCharacter(): Promise<void> {
         try {
-            // Use Copilot's command to accept one character
-            await vscode.commands.executeCommand('editor.action.inlineSuggest.acceptNextWord');
+            // Try all known commands for accepting inline suggestions character by character
+            const commands = [
+                // VS Code standard commands
+                'editor.action.inlineSuggest.acceptNextChar',
+                'editor.action.inlineSuggest.acceptNextWord',
+                // Copilot specific commands that might exist
+                'github.copilot.acceptNextWord',
+                'github.copilot.acceptNextChar'
+            ];
+            
+            // Try each command in order
+            for (const command of commands) {
+                try {
+                    // Check if command exists first
+                    const allCommands = await vscode.commands.getCommands();
+                    if (allCommands.includes(command)) {
+                        await vscode.commands.executeCommand(command);
+                        return; // Command succeeded
+                    }
+                } catch (error) {
+                    // Continue to next command
+                    console.log(`Command ${command} failed: ${error}`);
+                }
+            }
+            
+            // If we got here, none of the commands worked
+            // Fall back to accepting the whole suggestion
+            if (!this.fallbackWarningShown) {
+                console.warn('Character-by-character acceptance not available, falling back to full suggestion acceptance');
+                vscode.window.showWarningMessage('Character-by-character acceptance not available. Using full suggestion acceptance instead.');
+                this.fallbackWarningShown = true;
+            }
+            
+            // Stop the timer since we're accepting the whole suggestion
+            this.stopAcceptTimer();
+            await vscode.commands.executeCommand('editor.action.inlineSuggest.commit');
         } catch (error) {
-            console.error('Error accepting character:', error);
+            console.error('Error accepting suggestion:', error);
             this.stopAcceptTimer();
         }
     }
