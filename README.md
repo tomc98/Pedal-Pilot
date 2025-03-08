@@ -10,6 +10,9 @@ PedalPilot 🚀 – A VSCode extension that uses foot pedal input to seamlessly 
   - Pull back to send backspace keypresses that delete text
   - Speed varies based on pedal position (farther from center = faster action)
   - Adapts to available Copilot commands (falls back to full acceptance if needed)
+- Toggle text-to-speech with the rudder position (C variable)
+  - Move the rudder past a configurable threshold to toggle text-to-speech on/off
+  - When enabled, text changes are read aloud using your system's speech synthesis
 - Debug view to visualize pedal inputs
 - Auto-detection of commonly used USB pedals
 - Configuration options for custom devices
@@ -36,6 +39,7 @@ The extension adds the following commands to VS Code:
 - **Pedal Pilot: Reconnect to Pedals** - Attempts to reconnect to the configured pedal device
 - **Pedal Pilot: Show Debug View** - Opens a debug view showing raw pedal data
 - **Pedal Pilot: Calibrate Pedal Center Position** - Sets the current left pedal position as the center/neutral point
+- **Pedal Pilot: Toggle Text-to-Speech** - Manually enables or disables text-to-speech
 
 Using with GitHub Copilot:
 1. Ensure GitHub Copilot is installed and configured in VS Code
@@ -49,6 +53,13 @@ Using with GitHub Copilot:
    - Character-by-character acceptance depends on available VS Code commands. If not available, the extension will fall back to accepting the entire suggestion.
    - When pulling back, the extension sends actual backspace keypresses that delete text in your editor.
 
+Using Text-to-Speech:
+1. Move the rudder pedal (C variable) to toggle text-to-speech on or off
+   - Move rudder past the threshold (default: 90) to enable text-to-speech
+   - Move rudder back below the threshold to disable text-to-speech
+2. When enabled, any text changes in the editor will be read aloud
+3. A status bar item shows the current text-to-speech status (ON/OFF)
+
 ## Configuration
 
 The extension provides the following settings:
@@ -58,6 +69,7 @@ The extension provides the following settings:
 - `pedalPilot.debugMode`: Enable debug logging for pedal inputs (default: false)
 - `pedalPilot.pedalCenterPosition`: Center position value for the left pedal (default: 63)
 - `pedalPilot.pedalDeadzone`: Deadzone size around the center position (default: 1)
+- `pedalPilot.ttsToggleThreshold`: Rudder position threshold to toggle text-to-speech (default: 90)
 
 ## Troubleshooting
 
@@ -74,7 +86,8 @@ If the extension doesn't detect your pedals:
 - Custom pedal mapping for various VS Code functions
 - Support for additional pedal types and brands
 - Enhanced control options for GitHub Copilot
-- Right pedal and rudder functionality
+- Right pedal functionality
+- Additional text-to-speech voice customization options
 
 ## Credits
 

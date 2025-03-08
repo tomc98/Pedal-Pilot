@@ -41,6 +41,11 @@
           "type": "number",
           "default": 1,
           "description": "Deadzone size around the center position"
+        },
+        "pedalPilot.ttsToggleThreshold": {
+          "type": "number",
+          "default": 90,
+          "description": "Rudder position threshold (0-127) to toggle text-to-speech"
         }
       }
     },
@@ -64,6 +69,10 @@
       {
         "command": "pedalPilot.calibratePedalCenter",
         "title": "Pedal Pilot: Calibrate Pedal Center Position"
+      },
+      {
+        "command": "pedalPilot.toggleTTS",
+        "title": "Pedal Pilot: Toggle Text-to-Speech"
       }
     ]
   },

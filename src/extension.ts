@@ -4,6 +4,7 @@ import { selectHIDDevice } from './util';
 import { PedalDebugView } from './debugView';
 import { getConfig, updateConfig } from './config';
 import { CopilotService } from './copilotService';
+import { TTSService } from './ttsService';
 
 export function activate(context: vscode.ExtensionContext) {
   console.log('Activating Pedal Pilot extension');
@@ -26,6 +27,10 @@ export function activate(context: vscode.ExtensionContext) {
   // Create copilot service
   const copilotService = new CopilotService();
   context.subscriptions.push(copilotService);
+  
+  // Create text-to-speech service
+  const ttsService = new TTSService();
+  context.subscriptions.push(ttsService);
   
   // If debug mode is enabled, connect raw data to the debug view
   const config = getConfig();
@@ -84,6 +89,9 @@ export function activate(context: vscode.ExtensionContext) {
     statusBarItem.tooltip = 'Click to list available HID devices';
   }
 
+  // Track rudder position to detect changes for TTS toggle
+  let previousRudderPosition = 0;
+
   // Handle pedal state updates
   pedalService.onPedalStateChanged(state => {
     updateStatusBar(statusBarItem, state);
@@ -101,6 +109,22 @@ export function activate(context: vscode.ExtensionContext) {
     copilotService.executeCopilotControl(controlState).catch(error => {
       console.error('Error executing Copilot control:', error);
     });
+    
+    // Check if rudder position (C) crossed the threshold to toggle text-to-speech
+    const currentRudderPosition = state.rudderPosition;
+    
+    // Get the configuration value for TTS toggle threshold
+    const ttsToggleThreshold = getConfig().ttsToggleThreshold;
+    
+    // Detect threshold crossing
+    if ((previousRudderPosition < ttsToggleThreshold && currentRudderPosition >= ttsToggleThreshold) ||
+        (previousRudderPosition >= ttsToggleThreshold && currentRudderPosition < ttsToggleThreshold)) {
+      // Toggle text-to-speech
+      ttsService.toggle();
+    }
+    
+    // Update previous position for next comparison
+    previousRudderPosition = currentRudderPosition;
   });
 
   // Register command to select a device
@@ -180,7 +204,18 @@ export function activate(context: vscode.ExtensionContext) {
     });
   });
   
-  context.subscriptions.push(selectDeviceCommand, reconnectCommand, showDebugCommand, calibratePedalCenterCommand);
+  // Register command to toggle text-to-speech manually
+  const toggleTTSCommand = vscode.commands.registerCommand('pedalPilot.toggleTTS', () => {
+    ttsService.toggle();
+  });
+  
+  context.subscriptions.push(
+    selectDeviceCommand, 
+    reconnectCommand, 
+    showDebugCommand, 
+    calibratePedalCenterCommand,
+    toggleTTSCommand
+  );
 }
 
 // Helper function to update status bar with pedal state
