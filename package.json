@@ -5,7 +5,7 @@
   "description": "PedalPilot 🚀 – A VSCode extension that uses foot pedal input to seamlessly control AI completions. Adjust completion acceptance rate intuitively with foot pressure, keeping your hands coding and your workflow effortless.",
   "publisher": "pedalpilot",
   "engines": {
-    "vscode": "^1.98.0"
+    "vscode": "^1.93.0"
   },
   "categories": [
     "Other"
@@ -81,7 +81,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.13.10",
-    "@types/vscode": "^1.98.0",
+    "@types/vscode": "^1.93.0",
     "@vscode/vsce": "^3.2.2",
     "eslint": "^9.22.0",
     "prettier": "^3.5.3",
