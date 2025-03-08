@@ -68,18 +68,21 @@ export class CopilotService {
         // If in deadzone (intensity is 0), stop any running timers
         if (state.intensity === 0) {
             this.stopAcceptTimer();
+            this.stopDeleteTimer();
             return;
         }
 
         if (state.isAccepting) {
-            // Try our primary approach using VS Code commands
-            await this.acceptSuggestion(state.intensity);
+            // Stop any delete timer first
+            this.stopDeleteTimer();
             
-            // If that doesn't work, we could try simulating Tab key press
-            // but this would require editor APIs not currently available
+            // Start the acceptance process
+            await this.acceptSuggestion(state.intensity);
         } else if (state.isDeleting) {
             // Stop any accept timer first
             this.stopAcceptTimer();
+            
+            // Start the deletion process (backspace)
             await this.deleteSuggestion(state.intensity);
         }
     }
@@ -186,22 +189,56 @@ export class CopilotService {
         this.isCurrentlyAccepting = false;
     }
 
-    // Timer for repeating character deletion
+    // Timer for repeating character deletion (backspace)
     private deleteTimer: NodeJS.Timeout | null = null;
     
     /**
-     * Delete the current Copilot suggestion
-     * @param intensity The intensity/speed of deletion (0-100) - currently unused but kept for consistency
+     * Delete characters using backspace with the given intensity/speed
+     * @param intensity The intensity/speed of deletion (0-100)
      */
-    private async deleteSuggestion(_intensity: number): Promise<void> {
+    private async deleteSuggestion(intensity: number): Promise<void> {
         // Stop any existing timer
         this.stopDeleteTimer();
         
+        // First hide any current suggestion
         try {
-            // For immediate feedback, dismiss the entire suggestion
             await vscode.commands.executeCommand('editor.action.inlineSuggest.hide');
         } catch (error) {
-            console.error('Error deleting Copilot suggestion:', error);
+            console.error('Error hiding Copilot suggestion:', error);
+        }
+        
+        // Map intensity to delay between backspace presses (ms)
+        // Higher intensity = lower delay (faster deletion)
+        const delay = Math.max(5, Math.round((500 - (intensity * 4.8)) / 3));
+        
+        try {
+            // Get current editor
+            const editor = vscode.window.activeTextEditor;
+            
+            if (!editor) {
+                return;
+            }
+            
+            // Start a timer to repeatedly press backspace
+            this.deleteTimer = setInterval(() => {
+                this.sendBackspace();
+            }, delay);
+        } catch (error) {
+            console.error('Error setting up backspace timer:', error);
+            this.stopDeleteTimer();
+        }
+    }
+    
+    /**
+     * Send a backspace key to delete a character
+     */
+    private async sendBackspace(): Promise<void> {
+        try {
+            // Execute backspace through VS Code's delete command
+            await vscode.commands.executeCommand('deleteLeft');
+        } catch (error) {
+            console.error('Error sending backspace:', error);
+            this.stopDeleteTimer();
         }
     }
     
