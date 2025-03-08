@@ -19,7 +19,7 @@ export class CopilotService {
 
     /**
      * Calculate control state based on pedal position
-     * @param pedalValue Left pedal position (0-255)
+     * @param pedalValue Left pedal position (0-127)
      * @returns CopilotControlState with information about what action to take
      */
     public calculateControlState(pedalValue: number): CopilotControlState {
@@ -45,8 +45,8 @@ export class CopilotService {
         if (pedalValue > pedalCenter + pedalDeadzone) {
             // Accept direction
             state.isAccepting = true;
-            // Calculate intensity (0-100) based on distance from center, max at 255
-            state.intensity = Math.min(100, Math.round(((pedalValue - (pedalCenter + pedalDeadzone)) / (255 - (pedalCenter + pedalDeadzone))) * 100));
+            // Calculate intensity (0-100) based on distance from center, max at 127
+            state.intensity = Math.min(100, Math.round(((pedalValue - (pedalCenter + pedalDeadzone)) / (127 - (pedalCenter + pedalDeadzone))) * 100));
         } else if (pedalValue < pedalCenter - pedalDeadzone) {
             // Delete direction
             state.isDeleting = true;

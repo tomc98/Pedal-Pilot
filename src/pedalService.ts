@@ -3,9 +3,9 @@ import * as vscode from 'vscode';
 import { getConfig, PedalPilotConfig } from './config';
 
 export interface PedalState {
-  leftPedal: number;    // 0-255 value for left pedal position
-  rightPedal: number;   // 0-255 value for right pedal position
-  rudderPosition: number; // 0-255 value for rudder position (slide)
+  leftPedal: number;    // 0-127 value for left pedal position
+  rightPedal: number;   // 0-127 value for right pedal position
+  rudderPosition: number; // 0-127 value for rudder position (slide)
 }
 
 export class PedalService {
@@ -74,7 +74,8 @@ export class PedalService {
     
     // HID data format for Saitek Pro Flight Rudder Pedals
     // This may need to be adjusted based on the actual data format of the device
-    // Bytes 0 and 1: X-axis (rudder), Bytes 2 and 3: Y-axis (left pedal), Bytes 4 and 5: Z-axis (right pedal)
+    // Bytes 0: X-axis (rudder), Bytes 2: Y-axis (left pedal), Bytes 4: Z-axis (right pedal)
+    // Each value is in the range 0-127
     // Note: This is an approximation and the actual data format may vary
 
     // Update current state
