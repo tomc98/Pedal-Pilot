@@ -14,6 +14,10 @@ export class CopilotService {
         isDeleting: false,
         intensity: 0
     };
+    
+    // Add debounce and active flags for more reliable control
+    private isProcessingControl: boolean = false;
+    private pendingControlState: CopilotControlState | null = null;
 
     constructor() {}
 
@@ -62,29 +66,87 @@ export class CopilotService {
      * @param state The control state to execute
      */
     public async executeCopilotControl(state: CopilotControlState): Promise<void> {
-        // Update the current control state
-        this.controlState = state;
-
-        // If in deadzone (intensity is 0), stop any running timers
+        // First handle the deadzone case - stop all timers immediately
         if (state.intensity === 0) {
-            this.stopAcceptTimer();
-            this.stopDeleteTimer();
+            // Force immediate cleanup
+            this.forceStopAllTimers();
             return;
         }
-
-        if (state.isAccepting) {
-            // Stop any delete timer first
-            this.stopDeleteTimer();
-            
-            // Start the acceptance process
-            await this.acceptSuggestion(state.intensity);
-        } else if (state.isDeleting) {
-            // Stop any accept timer first
-            this.stopAcceptTimer();
-            
-            // Start the deletion process (backspace)
-            await this.deleteSuggestion(state.intensity);
+        
+        // Store this state as pending if we're already processing
+        if (this.isProcessingControl) {
+            this.pendingControlState = { ...state };
+            return;
         }
+        
+        try {
+            // Set processing flag to avoid overlapping operations
+            this.isProcessingControl = true;
+            
+            // Check if the control state has changed significantly
+            const isStateChanged = 
+                (state.isAccepting !== this.controlState.isAccepting) || 
+                (state.isDeleting !== this.controlState.isDeleting) ||
+                (Math.abs(state.intensity - this.controlState.intensity) > 5);
+            
+            // Update the current control state
+            this.controlState = { ...state };
+            
+            // Only update timers if state changed significantly to avoid jitter
+            if (isStateChanged) {
+                // Stop all timers first to ensure clean state
+                await this.forceStopAllTimers();
+                
+                // Only start new actions if we're not in deadzone
+                if (state.intensity > 0) {
+                    if (state.isAccepting) {
+                        // Start the acceptance process
+                        await this.acceptSuggestion(state.intensity);
+                    } else if (state.isDeleting) {
+                        // Start the deletion process (backspace)
+                        await this.deleteSuggestion(state.intensity);
+                    }
+                }
+            }
+        } finally {
+            // Clear processing flag
+            this.isProcessingControl = false;
+            
+            // Process any pending state that came in while we were busy
+            if (this.pendingControlState) {
+                const pendingState = this.pendingControlState;
+                this.pendingControlState = null;
+                // Process the pending state (will be subject to the same checks)
+                await this.executeCopilotControl(pendingState);
+            }
+        }
+    }
+    
+    /**
+     * Force stop all timers and reset all flags immediately
+     */
+    private async forceStopAllTimers(): Promise<void> {
+        // Stop all timers
+        if (this.acceptTimer) {
+            clearInterval(this.acceptTimer);
+            this.acceptTimer = null;
+        }
+        
+        if (this.deleteTimer) {
+            clearInterval(this.deleteTimer);
+            this.deleteTimer = null;
+        }
+        
+        // Reset all state flags
+        this.isCurrentlyAccepting = false;
+        this.isCurrentlyDeleting = false;
+        
+        // Clear the control state
+        this.controlState = {
+            isAccepting: false,
+            isDeleting: false,
+            intensity: 0
+        };
     }
 
     // Timer for repeating character acceptance
@@ -104,8 +166,8 @@ export class CopilotService {
         
         // Map intensity to delay between character acceptances (ms)
         // Higher intensity = lower delay (faster acceptance)
-        // Increasing speed by factor of 3
-        const delay = Math.max(5, Math.round((500 - (intensity * 4.8)) / 3));
+        // Improve responsiveness with a more aggressive curve
+        const delay = Math.max(5, Math.round(250 - (intensity * 2.45)));
         
         try {
             // Get current editor
@@ -118,10 +180,16 @@ export class CopilotService {
             // Start accepting one character at a time
             this.isCurrentlyAccepting = true;
             
-            // Start a timer to repeatedly accept one character at a time
-            this.acceptTimer = setInterval(() => {
-                this.acceptOneCharacter();
-            }, delay);
+            // Accept one character immediately for better responsiveness
+            await this.acceptOneCharacter();
+            
+            // Only start a timer if we're still accepting (not back in deadzone)
+            if (this.isCurrentlyAccepting) {
+                // Start a timer to repeatedly accept one character at a time
+                this.acceptTimer = setInterval(() => {
+                    this.acceptOneCharacter();
+                }, delay);
+            }
         } catch (error) {
             console.error('Error accepting Copilot suggestion:', error);
             this.stopAcceptTimer();
@@ -135,6 +203,12 @@ export class CopilotService {
     private fallbackWarningShown = false;
     
     private async acceptOneCharacter(): Promise<void> {
+        // Exit early if no longer accepting
+        if (!this.isCurrentlyAccepting) {
+            this.stopAcceptTimer();
+            return;
+        }
+        
         try {
             // Try all known commands for accepting inline suggestions character by character
             const commands = [
@@ -149,6 +223,12 @@ export class CopilotService {
             // Try each command in order
             for (const command of commands) {
                 try {
+                    // Check if we're still accepting
+                    if (!this.isCurrentlyAccepting) {
+                        this.stopAcceptTimer();
+                        return;
+                    }
+                    
                     // Check if command exists first
                     const allCommands = await vscode.commands.getCommands();
                     if (allCommands.includes(command)) {
@@ -171,7 +251,11 @@ export class CopilotService {
             
             // Stop the timer since we're accepting the whole suggestion
             this.stopAcceptTimer();
-            await vscode.commands.executeCommand('editor.action.inlineSuggest.commit');
+            
+            // Only perform the commit if we're still accepting
+            if (this.isCurrentlyAccepting) {
+                await vscode.commands.executeCommand('editor.action.inlineSuggest.commit');
+            }
         } catch (error) {
             console.error('Error accepting suggestion:', error);
             this.stopAcceptTimer();
@@ -192,6 +276,9 @@ export class CopilotService {
     // Timer for repeating character deletion (backspace)
     private deleteTimer: NodeJS.Timeout | null = null;
     
+    // Flag to track if we're currently in a deleting state
+    private isCurrentlyDeleting: boolean = false;
+    
     /**
      * Delete characters using backspace with the given intensity/speed
      * @param intensity The intensity/speed of deletion (0-100)
@@ -209,7 +296,8 @@ export class CopilotService {
         
         // Map intensity to delay between backspace presses (ms)
         // Higher intensity = lower delay (faster deletion)
-        const delay = Math.max(5, Math.round((500 - (intensity * 4.8)) / 3));
+        // Improve responsiveness with a more aggressive curve
+        const delay = Math.max(5, Math.round(250 - (intensity * 2.45)));
         
         try {
             // Get current editor
@@ -219,10 +307,19 @@ export class CopilotService {
                 return;
             }
             
-            // Start a timer to repeatedly press backspace
-            this.deleteTimer = setInterval(() => {
-                this.sendBackspace();
-            }, delay);
+            // Mark that we're deleting
+            this.isCurrentlyDeleting = true;
+            
+            // Send a backspace immediately for better responsiveness
+            await this.sendBackspace();
+            
+            // Only continue if we're still in deleting state
+            if (this.isCurrentlyDeleting) {
+                // Start a timer to repeatedly press backspace
+                this.deleteTimer = setInterval(() => {
+                    this.sendBackspace();
+                }, delay);
+            }
         } catch (error) {
             console.error('Error setting up backspace timer:', error);
             this.stopDeleteTimer();
@@ -233,6 +330,12 @@ export class CopilotService {
      * Send a backspace key to delete a character
      */
     private async sendBackspace(): Promise<void> {
+        // Exit early if no longer deleting
+        if (!this.isCurrentlyDeleting) {
+            this.stopDeleteTimer();
+            return;
+        }
+        
         try {
             // Execute backspace through VS Code's delete command
             await vscode.commands.executeCommand('deleteLeft');
@@ -250,11 +353,13 @@ export class CopilotService {
             clearInterval(this.deleteTimer);
             this.deleteTimer = null;
         }
+        this.isCurrentlyDeleting = false;
     }
 
     public dispose(): void {
-        this.stopAcceptTimer();
-        this.stopDeleteTimer();
+        this.forceStopAllTimers();
+        this.isProcessingControl = false;
+        this.pendingControlState = null;
         this.disposables.forEach(d => d.dispose());
     }
 }
