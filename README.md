@@ -5,10 +5,14 @@ PedalPilot 🚀 – A VSCode extension that uses foot pedal input to seamlessly 
 ## Features
 
 - Connect to Saitek Pro Flight Rudder Pedals or other similar HID devices
-- Use foot pedals to control VS Code actions (AI completions integration coming soon)
+- Control GitHub Copilot inline suggestions with your left pedal
+  - Push forward to accept suggestions
+  - Pull back to delete suggestions
+  - Intensity based on pedal position (faster acceptance/deletion with more pressure)
 - Debug view to visualize pedal inputs
 - Auto-detection of commonly used USB pedals
 - Configuration options for custom devices
+- Calibration command to set the center position for your pedals
 
 ## Requirements
 
@@ -30,6 +34,15 @@ The extension adds the following commands to VS Code:
 - **Pedal Pilot: Select Pedal Device** - Allows you to choose a specific pedal device
 - **Pedal Pilot: Reconnect to Pedals** - Attempts to reconnect to the configured pedal device
 - **Pedal Pilot: Show Debug View** - Opens a debug view showing raw pedal data
+- **Pedal Pilot: Calibrate Pedal Center Position** - Sets the current left pedal position as the center/neutral point
+
+Using with GitHub Copilot:
+1. Ensure GitHub Copilot is installed and configured in VS Code
+2. Start typing code to generate Copilot suggestions
+3. Use the left pedal to control acceptance:
+   - Keep pedal at center position (default: 63) to see suggestions without accepting/rejecting
+   - Push pedal forward to accept suggestions (harder push = faster acceptance)
+   - Pull pedal back to dismiss suggestions
 
 ## Configuration
 
@@ -38,6 +51,8 @@ The extension provides the following settings:
 - `pedalPilot.vendorId`: Vendor ID of your pedal device (default: 0x06A3 for Saitek)
 - `pedalPilot.productId`: Product ID of your pedal device (default: 0x0763 for Saitek Pro Flight Rudder Pedals)
 - `pedalPilot.debugMode`: Enable debug logging for pedal inputs (default: false)
+- `pedalPilot.pedalCenterPosition`: Center position value for the left pedal (default: 63)
+- `pedalPilot.pedalDeadzone`: Deadzone size around the center position (default: 1)
 
 ## Troubleshooting
 
@@ -50,10 +65,11 @@ If the extension doesn't detect your pedals:
 
 ## Planned Features
 
-- Integration with VS Code's Copilot and other AI assistants
+- Integration with other AI assistants beyond GitHub Copilot
 - Custom pedal mapping for various VS Code functions
-- Support for multiple pedal types
-- Pressure sensitivity controls
+- Support for additional pedal types and brands
+- Enhanced control options for GitHub Copilot
+- Right pedal and rudder functionality
 
 ## Credits
 

@@ -31,6 +31,16 @@
           "type": "boolean",
           "default": false,
           "description": "Enable debug logging for pedal inputs"
+        },
+        "pedalPilot.pedalCenterPosition": {
+          "type": "number",
+          "default": 63,
+          "description": "Center position value for the left pedal (0-255)"
+        },
+        "pedalPilot.pedalDeadzone": {
+          "type": "number",
+          "default": 1,
+          "description": "Deadzone size around the center position"
         }
       }
     },
@@ -50,6 +60,10 @@
       {
         "command": "pedalPilot.showDebugView",
         "title": "Pedal Pilot: Show Debug View"
+      },
+      {
+        "command": "pedalPilot.calibratePedalCenter",
+        "title": "Pedal Pilot: Calibrate Pedal Center Position"
       }
     ]
   },

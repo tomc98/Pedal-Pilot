@@ -3,6 +3,7 @@ import { PedalService, PedalState } from './pedalService';
 import { selectHIDDevice } from './util';
 import { PedalDebugView } from './debugView';
 import { getConfig, updateConfig } from './config';
+import { CopilotService } from './copilotService';
 
 export function activate(context: vscode.ExtensionContext) {
   console.log('Activating Pedal Pilot extension');
@@ -21,6 +22,10 @@ export function activate(context: vscode.ExtensionContext) {
   // Create and initialize pedal service
   const pedalService = new PedalService();
   context.subscriptions.push(pedalService);
+  
+  // Create copilot service
+  const copilotService = new CopilotService();
+  context.subscriptions.push(copilotService);
   
   // If debug mode is enabled, connect raw data to the debug view
   const config = getConfig();
@@ -82,8 +87,20 @@ export function activate(context: vscode.ExtensionContext) {
   // Handle pedal state updates
   pedalService.onPedalStateChanged(state => {
     updateStatusBar(statusBarItem, state);
-    // Here we would handle pedal input to control AI completions
-    // This will be implemented in a future version
+    
+    // Use the left pedal value to control Copilot
+    const controlState = copilotService.calculateControlState(state.leftPedal);
+    
+    // Update status bar with control state info
+    if (controlState.isAccepting || controlState.isDeleting) {
+      const actionText = controlState.isAccepting ? 'Accepting' : 'Deleting';
+      statusBarItem.text = `$(device-desktop) ${actionText} (${controlState.intensity}%) L:${state.leftPedal} R:${state.rightPedal} C:${state.rudderPosition}`;
+    }
+    
+    // Execute the control action
+    copilotService.executeCopilotControl(controlState).catch(error => {
+      console.error('Error executing Copilot control:', error);
+    });
   });
 
   // Register command to select a device
@@ -152,12 +169,26 @@ export function activate(context: vscode.ExtensionContext) {
     }
   });
   
-  context.subscriptions.push(selectDeviceCommand, reconnectCommand, showDebugCommand);
+  // Register command to calibrate pedal center
+  const calibratePedalCenterCommand = vscode.commands.registerCommand('pedalPilot.calibratePedalCenter', () => {
+    const currentState = pedalService.getPedalState();
+    const currentLeftPedal = currentState.leftPedal;
+    
+    updateConfig('pedalCenterPosition', currentLeftPedal).then(() => {
+      vscode.window.showInformationMessage(`Pedal center calibrated to position ${currentLeftPedal}`);
+      statusBarItem.text = `$(device-desktop) Center: ${currentLeftPedal} L: ${currentState.leftPedal} R: ${currentState.rightPedal} C: ${currentState.rudderPosition}`;
+    });
+  });
+  
+  context.subscriptions.push(selectDeviceCommand, reconnectCommand, showDebugCommand, calibratePedalCenterCommand);
 }
 
 // Helper function to update status bar with pedal state
 function updateStatusBar(statusBar: vscode.StatusBarItem, state: PedalState): void {
-  statusBar.text = `$(device-desktop) L: ${state.leftPedal} R: ${state.rightPedal} C: ${state.rudderPosition}`;
+  // Only update if the control state hasn't overridden the text
+  if (!statusBar.text.includes('Accepting') && !statusBar.text.includes('Deleting')) {
+    statusBar.text = `$(device-desktop) L: ${state.leftPedal} R: ${state.rightPedal} C: ${state.rudderPosition}`;
+  }
 }
 
 export function deactivate() {
